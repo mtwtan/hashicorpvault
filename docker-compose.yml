@@ -1,0 +1,34 @@
+version: '3'
+services:
+  consul:
+    container_name: consul.server
+    command: agent -server -bind 0.0.0.0 -client 0.0.0.0 -bootstrap-expect=1
+    image: consul:latest
+    volumes:
+      - /mnt/docker/consul/config:/consul/config
+      - /mnt/docker/consul/data:/consul/data
+    ports:
+      - "8500:8500"
+      - "9300:9300"
+      - "9500:9500"
+      - "9600:9600/udp"
+  vault:
+    container_name: vault.server
+    dns:
+      - < DNS server 1 >
+      - < DNS server 2 >
+    image: vault
+    ports:
+      - "8200:8200"
+    volumes:
+      - /mnt/docker/vault/config:/mnt/vault/config
+      - /mnt/docker/vault/data:/mnt/vault/data
+      - /mnt/docker/vault/logs:/mnt/vault/logs
+    cap_add:
+      - IPC_LOCK
+    environment:
+      - VAULT_ADDR=http://127.0.0.1:8200
+      - VAULT_LOCAL_CONFIG={"ui":1,"backend":{"consul":{"address":"${LOCAL_IP}:9500","advertise_addr":"http://${LOCAL_IP}", "path":"vault/"}},"listener":{"tcp":{"address":"0.0.0.0:8200","tls_disable":1}}}
+    command: server
+    depends_on:
+      - consul
